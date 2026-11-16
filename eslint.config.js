@@ -9,6 +9,7 @@ import tseslint from 'typescript-eslint';
 export default defineConfig(
   {
     ignores: [
+      'scripts/**',
       'eslint.config.js',
       'vite.config.ts',
       'dist',
