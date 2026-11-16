@@ -1,0 +1,10 @@
+dist
+dev-dist
+coverage
+private
+pnpm-lock.yaml
+*.xlsx
+docs
+scripts
+CLAUDE.md
+README.md
