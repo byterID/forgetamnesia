@@ -34,22 +34,30 @@ export function positions(
   accounts: Iterable<Account>,
   transactions: Iterable<Transaction>,
 ): Position[] {
-  const list = [...accounts];
-  const balances = new Map(list.map((account) => [account.id, account.openingBalance]));
+  // A Map keeps the order of the accounts; updating a key does not move it.
+  const state = new Map<string, Position>();
+  for (const account of accounts) {
+    state.set(account.id, { account, balance: account.openingBalance });
+  }
   for (const transaction of transactions) {
     for (const { accountId, delta } of balanceEffects(transaction)) {
-      const balance = balances.get(accountId);
-      if (balance) balances.set(accountId, addMoney(balance, delta));
+      const position = state.get(accountId);
+      if (position) {
+        state.set(accountId, { ...position, balance: addMoney(position.balance, delta) });
+      }
     }
   }
-  return list.map((account) => ({
-    account,
-    balance: balances.get(account.id) ?? account.openingBalance,
-  }));
+  return [...state.values()];
 }
 
 export function accountBalance(account: Account, transactions: Iterable<Transaction>): Money {
-  return positions([account], transactions)[0]?.balance ?? account.openingBalance;
+  let balance = account.openingBalance;
+  for (const transaction of transactions) {
+    for (const { accountId, delta } of balanceEffects(transaction)) {
+      if (accountId === account.id) balance = addMoney(balance, delta);
+    }
+  }
+  return balance;
 }
 
 /** Sum in the base currency, converted exactly and rounded once. Empty balances need no rate. */
