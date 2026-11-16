@@ -1,12 +1,17 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter } from 'react-router';
 import { AppRoutes } from '@/routes';
-import { Toaster } from '@/ui/toaster';
+
+// Not needed for first paint: keeps sonner out of the initial bundle.
+const Toaster = lazy(() => import('@/ui/toaster').then((m) => ({ default: m.Toaster })));
 
 export function App() {
   return (
     <BrowserRouter>
       <AppRoutes />
-      <Toaster />
+      <Suspense fallback={null}>
+        <Toaster />
+      </Suspense>
     </BrowserRouter>
   );
 }
