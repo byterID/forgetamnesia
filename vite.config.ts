@@ -1,5 +1,6 @@
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 import { manifest } from './src/pwa/manifest';
@@ -7,6 +8,7 @@ import { manifest } from './src/pwa/manifest';
 export default defineConfig({
   plugins: [
     react(),
+    tailwindcss(),
     VitePWA({
       // Update flow: the new SW installs, skips waiting and claims clients at once; main.tsx
       // reloads the page when the new SW takes control, so users are never stuck on a stale shell.

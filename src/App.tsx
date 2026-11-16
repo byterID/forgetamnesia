@@ -1,7 +1,11 @@
+import { t } from '@/i18n';
+import { Toaster } from '@/ui/toaster';
+
 export function App() {
   return (
-    <main>
-      <h1>ForgetAmnesia</h1>
+    <main className="p-4">
+      <h1 className="text-xl font-semibold">{t('app.title')}</h1>
+      <Toaster />
     </main>
   );
 }

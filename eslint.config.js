@@ -37,5 +37,7 @@ export default defineConfig(
       'react-refresh/only-export-components': ['error', { allowConstantExport: true }],
     },
   },
+  // shadcn convention: ui files co-export variants/helpers with components.
+  { files: ['src/ui/**'], rules: { 'react-refresh/only-export-components': 'off' } },
   prettier,
 );
