@@ -1,4 +1,3 @@
-import { DomainError } from '@/domain/errors';
 import {
   cryptoAsset,
   Dec,
@@ -9,6 +8,7 @@ import {
   moneyToDecimalString,
   parseMoney,
 } from '@/domain/money';
+import { codeOf } from '@tests/support/code-of';
 
 const RUB = fiatAsset('RUB');
 const USD = fiatAsset('USD');
@@ -18,16 +18,6 @@ const USDT = cryptoAsset('USDT', 6);
 
 /** Intl uses non-breaking and narrow spaces; the tests only care about the visible text. */
 const plain = (text: string) => text.replace(/\s/g, ' ');
-
-function codeOf(run: () => unknown): string | undefined {
-  try {
-    run();
-  } catch (error) {
-    if (error instanceof DomainError) return error.code;
-    throw error;
-  }
-  return undefined;
-}
 
 describe('moneyToDecimalString', () => {
   it('writes the exact amount in major units', () => {

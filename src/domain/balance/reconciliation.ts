@@ -1,8 +1,11 @@
 import type { Account } from '@/domain/accounts';
-import { isoDate } from '@/domain/date';
-import { usdPrice } from '@/domain/fx';
-import { isZero, money, subtractMoney, type DecimalInput, type Money } from '@/domain/money';
-import type { Adjustment, Transaction } from '@/domain/transactions';
+import { isPositive, isZero, negateMoney, subtractMoney, type Money } from '@/domain/money';
+import {
+  createTransaction,
+  lookupContext,
+  type Adjustment,
+  type Transaction,
+} from '@/domain/transactions';
 import { accountBalance } from './balance';
 
 /**
@@ -15,17 +18,22 @@ export function reconcile(
   account: Account,
   transactions: Iterable<Transaction>,
   realBalance: Money,
-  details: { id: string; date: string; usdPrice: DecimalInput },
+  details: { id: string; date: string; usdPrice: string },
 ): Adjustment | undefined {
   const difference = subtractMoney(realBalance, accountBalance(account, transactions));
   if (isZero(difference)) return undefined;
-  return {
-    id: details.id,
-    type: 'adjustment',
-    date: isoDate(details.date),
-    accountId: account.id,
-    amount: money(Math.abs(difference.amount), account.asset),
-    direction: difference.amount > 0 ? 'increase' : 'decrease',
-    usdPrice: usdPrice(details.usdPrice).toFixed(),
-  };
+  const increase = isPositive(difference);
+  // Built like any other transaction, so it obeys the same invariants.
+  return createTransaction<Adjustment>(
+    {
+      id: details.id,
+      type: 'adjustment',
+      date: details.date,
+      accountId: account.id,
+      amount: increase ? difference : negateMoney(difference),
+      direction: increase ? 'increase' : 'decrease',
+      usdPrice: details.usdPrice,
+    },
+    lookupContext([account], []),
+  );
 }

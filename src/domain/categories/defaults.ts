@@ -1,3 +1,4 @@
+import { omitUndefined } from '@/domain/object';
 import type { Category, CategoryKind } from './category';
 
 interface Seed {
@@ -47,15 +48,15 @@ const INCOME: Seed[] = [
 function expand(seeds: Seed[], kind: CategoryKind, parentId?: string): Category[] {
   return seeds.flatMap((seed, order) => {
     const id = `${parentId ?? `default:${kind}`}:${seed.slug}`;
-    const category: Category = {
+    const category: Category = omitUndefined({
       id,
       name: seed.name,
       kind,
-      ...(parentId !== undefined && { parentId }),
-      ...(seed.isMandatory && { isMandatory: true }),
-      ...(seed.system && { system: seed.system }),
+      parentId,
+      isMandatory: seed.isMandatory,
+      system: seed.system,
       order,
-    };
+    });
     return [category, ...expand(seed.children ?? [], kind, id)];
   });
 }

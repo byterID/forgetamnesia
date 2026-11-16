@@ -1,19 +1,9 @@
 import { ACCOUNT_KINDS, createAccount, liquidityOf, type AccountKind } from '@/domain/accounts';
-import { DomainError } from '@/domain/errors';
 import { cryptoAsset, fiatAsset, money, zeroMoney } from '@/domain/money';
+import { codeOf } from '@tests/support/code-of';
 
 const RUB = fiatAsset('RUB');
 const USD = fiatAsset('USD');
-
-function codeOf(run: () => unknown): string | undefined {
-  try {
-    run();
-  } catch (error) {
-    if (error instanceof DomainError) return error.code;
-    throw error;
-  }
-  return undefined;
-}
 
 const base = {
   id: 'a1',
@@ -80,6 +70,12 @@ describe('createAccount', () => {
     expect(createAccount({ ...base, system: 'importedHistory' }).system).toBe('importedHistory');
   });
 
+  it('rejects a balance that is not a whole number of minor units, however it was built', () => {
+    const float = { amount: 0.5, asset: RUB };
+    expect(codeOf(() => createAccount({ ...base, openingBalance: float }))).toBe('amount-invalid');
+    expect(codeOf(() => createAccount({ ...base, creditLimit: float }))).toBe('amount-invalid');
+  });
+
   it('rejects an empty name, a foreign-asset balance and an impossible date', () => {
     expect(codeOf(() => createAccount({ ...base, name: '   ' }))).toBe('account-invalid');
     expect(codeOf(() => createAccount({ ...base, id: '' }))).toBe('account-invalid');
@@ -115,9 +111,6 @@ describe('liquidityOf', () => {
 
   it('a credit card is outside liquidity: its debt is counted separately', () => {
     expect(of('credit')).toBeUndefined();
-    expect(
-      codeOf(() => createAccount({ ...base, kind: 'credit', liquidityOverride: 'available' })),
-    ).toBe('account-invalid');
   });
 
   it('an override wins over the kind', () => {
@@ -128,6 +121,9 @@ describe('liquidityOf', () => {
       liquidityOverride: 'available',
     });
     expect(liquidityOf(stablecoins)).toBe('available');
+    expect(
+      liquidityOf(createAccount({ ...base, kind: 'credit', liquidityOverride: 'available' })),
+    ).toBe('available');
     expect(liquidityOf(createAccount({ ...base, kind: 'bank', liquidityOverride: 'locked' }))).toBe(
       'locked',
     );

@@ -1,6 +1,6 @@
 import { isoDate, type IsoDate } from '@/domain/date';
 import { DomainError } from '@/domain/errors';
-import { sameAsset, zeroMoney, type Asset, type Money } from '@/domain/money';
+import { assertMoney, sameAsset, zeroMoney, type Asset, type Money } from '@/domain/money';
 import { omitUndefined } from '@/domain/object';
 
 export const ACCOUNT_KINDS = [
@@ -60,7 +60,9 @@ const KIND_LIQUIDITY: Record<AccountKind, Liquidity | undefined> = {
 };
 
 function assertInAsset(value: Money | undefined, asset: Asset, field: string): void {
-  if (value && !sameAsset(value.asset, asset)) {
+  if (!value) return;
+  assertMoney(value);
+  if (!sameAsset(value.asset, asset)) {
     throw new DomainError(
       'asset-mismatch',
       `Account ${field} must be in ${asset.code}, got ${value.asset.code}`,
@@ -72,9 +74,6 @@ export function createAccount(input: AccountInput): Account {
   const name = input.name.trim();
   if (input.id === '' || name === '') {
     throw new DomainError('account-invalid', 'Account needs an id and a name');
-  }
-  if (input.kind === 'credit' && input.liquidityOverride) {
-    throw new DomainError('account-invalid', 'A credit card has no liquidity to override');
   }
   assertInAsset(input.openingBalance, input.asset, 'opening balance');
   assertInAsset(input.creditLimit, input.asset, 'credit limit');

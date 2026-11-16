@@ -1,5 +1,5 @@
-import { DomainError } from '@/domain/errors';
 import { cryptoAsset, fiatAsset, money, parseMoney } from '@/domain/money';
+import { codeOf } from '@tests/support/code-of';
 
 const RUB = fiatAsset('RUB');
 const JPY = fiatAsset('JPY');
@@ -10,16 +10,6 @@ const NBSP = String.fromCharCode(0xa0);
 const NARROW_NBSP = String.fromCharCode(0x202f);
 const THIN_SPACE = String.fromCharCode(0x2009);
 const TYPOGRAPHIC_MINUS = String.fromCharCode(0x2212);
-
-function codeOf(run: () => unknown): string | undefined {
-  try {
-    run();
-  } catch (error) {
-    if (error instanceof DomainError) return error.code;
-    throw error;
-  }
-  return undefined;
-}
 
 describe('parseMoney', () => {
   it('reads what a user types into an amount field', () => {

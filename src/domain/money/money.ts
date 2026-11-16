@@ -1,4 +1,4 @@
-import { DomainError } from '@/domain/errors';
+import { DomainError, type DomainErrorCode } from '@/domain/errors';
 import { sameAsset, type Asset } from './asset';
 
 /** An amount of one asset in integer minor units (ADR-005). Never a float. */
@@ -7,15 +7,28 @@ export interface Money {
   readonly asset: Asset;
 }
 
-export function money(amount: number, asset: Asset): Money {
+/** The one gate every amount passes: a safe integer, with -0 normalised to 0. */
+function safeUnits(amount: number, asset: Asset, code: DomainErrorCode): Money {
   if (!Number.isSafeInteger(amount)) {
     throw new DomainError(
-      'amount-invalid',
-      `Amount must be a safe integer of minor units, got ${String(amount)}`,
+      code,
+      `Amount of ${asset.code} must be a safe integer of minor units, got ${String(amount)}`,
     );
   }
   // `amount + 0` turns -0 into 0, so equal amounts are always structurally equal.
   return { amount: amount + 0, asset };
+}
+
+export function money(amount: number, asset: Asset): Money {
+  return safeUnits(amount, asset, 'amount-invalid');
+}
+
+/**
+ * Re-checks a `Money` that did not come from this module (a literal, a stored record) before it
+ * is trusted: `Money` is a plain shape, so only this keeps a float out of the books.
+ */
+export function assertMoney(value: Money): void {
+  safeUnits(value.amount, value.asset, 'amount-invalid');
 }
 
 export function zeroMoney(asset: Asset): Money {
@@ -28,22 +41,15 @@ function assertSameAsset(a: Asset, b: Asset): void {
   }
 }
 
-/** Result of integer arithmetic on two safe integers: exact unless it left the safe range. */
-function checked(amount: number, asset: Asset): Money {
-  if (!Number.isSafeInteger(amount)) {
-    throw new DomainError('amount-overflow', `Amount of ${asset.code} is out of the safe range`);
-  }
-  return { amount: amount + 0, asset };
-}
-
 export function addMoney(a: Money, b: Money): Money {
   assertSameAsset(a.asset, b.asset);
-  return checked(a.amount + b.amount, a.asset);
+  // Integer arithmetic on safe integers is exact unless the result leaves the safe range.
+  return safeUnits(a.amount + b.amount, a.asset, 'amount-overflow');
 }
 
 export function subtractMoney(a: Money, b: Money): Money {
   assertSameAsset(a.asset, b.asset);
-  return checked(a.amount - b.amount, a.asset);
+  return safeUnits(a.amount - b.amount, a.asset, 'amount-overflow');
 }
 
 export function negateMoney(a: Money): Money {

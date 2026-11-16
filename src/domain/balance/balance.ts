@@ -1,17 +1,18 @@
 import { liquidityOf, type Account } from '@/domain/accounts';
 import type { IsoDate } from '@/domain/date';
-import { convertExact, usdPriceOn, type Rate } from '@/domain/fx';
+import { convertExactOn, type Rate } from '@/domain/fx';
 import {
-  addMoney,
   Dec,
+  isNegative,
   isZero,
   roundToMoney,
   subtractMoney,
+  sumMoney,
   zeroMoney,
   type Asset,
   type Money,
 } from '@/domain/money';
-import { balanceEffects, type Transaction } from '@/domain/transactions';
+import { balanceEffects, type BalanceEffect, type Transaction } from '@/domain/transactions';
 
 /** An account together with its current balance. */
 export interface Position {
@@ -19,60 +20,46 @@ export interface Position {
   readonly balance: Money;
 }
 
-/** In which currency and at which day's rates totals are expressed. */
-export interface Valuation {
-  readonly base: Asset;
+/** What totals are expressed in: the base currency and the rates of a day. */
+export interface ReportingBasis {
+  readonly baseCurrency: Asset;
   readonly rates: readonly Rate[];
   readonly date: IsoDate;
 }
 
+/** Opening balance plus every effect that lands on the account. */
+function balanceAfter(account: Account, effects: readonly BalanceEffect[]): Money {
+  const deltas = effects
+    .filter((effect) => effect.accountId === account.id)
+    .map((effect) => effect.delta);
+  return sumMoney(account.asset, [account.openingBalance, ...deltas]);
+}
+
+export function accountBalance(account: Account, transactions: Iterable<Transaction>): Money {
+  return balanceAfter(account, [...transactions].flatMap(balanceEffects));
+}
+
 /**
- * Balance of every given account: opening balance plus the effects of its transactions.
- * Effects on accounts that were not given (deleted ones) are ignored.
+ * Balance of every given account, in the order given. Effects on accounts that were not given
+ * (deleted ones) are ignored.
  */
 export function positions(
   accounts: Iterable<Account>,
   transactions: Iterable<Transaction>,
 ): Position[] {
-  // A Map keeps the order of the accounts; updating a key does not move it.
-  const state = new Map<string, Position>();
-  for (const account of accounts) {
-    state.set(account.id, { account, balance: account.openingBalance });
-  }
-  for (const transaction of transactions) {
-    for (const { accountId, delta } of balanceEffects(transaction)) {
-      const position = state.get(accountId);
-      if (position) {
-        state.set(accountId, { ...position, balance: addMoney(position.balance, delta) });
-      }
-    }
-  }
-  return [...state.values()];
+  const effects = [...transactions].flatMap(balanceEffects);
+  return [...accounts].map((account) => ({ account, balance: balanceAfter(account, effects) }));
 }
 
-export function accountBalance(account: Account, transactions: Iterable<Transaction>): Money {
-  let balance = account.openingBalance;
-  for (const transaction of transactions) {
-    for (const { accountId, delta } of balanceEffects(transaction)) {
-      if (accountId === account.id) balance = addMoney(balance, delta);
-    }
-  }
-  return balance;
-}
-
-/** Sum in the base currency, converted exactly and rounded once. Empty balances need no rate. */
-function total(amounts: Iterable<Money>, { base, rates, date }: Valuation): Money {
-  let sum = new Dec(0);
-  for (const amount of amounts) {
-    if (isZero(amount)) continue;
-    sum = sum.plus(
-      convertExact(amount, base, {
-        from: usdPriceOn(rates, amount.asset.code, date),
-        to: usdPriceOn(rates, base.code, date),
-      }),
-    );
-  }
-  return roundToMoney(sum, base);
+/** Sum in the base currency: converted exactly, rounded once (ADR-031). */
+function total(amounts: readonly Money[], { baseCurrency, rates, date }: ReportingBasis): Money {
+  const sum = amounts.reduce(
+    // An empty balance needs no rate, however exotic its asset.
+    (acc, amount) =>
+      isZero(amount) ? acc : acc.plus(convertExactOn(amount, baseCurrency, rates, date)),
+    new Dec(0),
+  );
+  return roundToMoney(sum, baseCurrency);
 }
 
 const isOwn = ({ account }: Position) => account.system === undefined;
@@ -82,10 +69,10 @@ const isOwn = ({ account }: Position) => account.system === undefined;
  * `volatile` included; a negative credit-card balance already reduces it. The system account
  * `importedHistory` is excluded (ADR-016).
  */
-export function netWorth(state: Iterable<Position>, valuation: Valuation): Money {
+export function netWorth(state: Iterable<Position>, basis: ReportingBasis): Money {
   return total(
     [...state].filter(isOwn).map((position) => position.balance),
-    valuation,
+    basis,
   );
 }
 
@@ -95,15 +82,15 @@ export function netWorth(state: Iterable<Position>, valuation: Valuation): Money
  */
 export function availableNow(
   state: Iterable<Position>,
-  valuation: Valuation,
-  reserved: Money = zeroMoney(valuation.base),
+  basis: ReportingBasis,
+  reserved: Money = zeroMoney(basis.baseCurrency),
 ): Money {
-  const own = [...state].filter(isOwn);
-  const available = own
-    .filter(({ account }) => liquidityOf(account) === 'available')
+  const counted = [...state]
+    .filter(isOwn)
+    .filter(
+      ({ account, balance }) =>
+        liquidityOf(account) === 'available' || (account.kind === 'credit' && isNegative(balance)),
+    )
     .map((position) => position.balance);
-  const debts = own
-    .filter(({ account, balance }) => account.kind === 'credit' && balance.amount < 0)
-    .map((position) => position.balance);
-  return subtractMoney(total([...available, ...debts], valuation), reserved);
+  return subtractMoney(total(counted, basis), reserved);
 }

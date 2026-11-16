@@ -21,7 +21,7 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "paths": { "@/*": ["./src/*"] }
+    "paths": { "@/*": ["./src/*"], "@tests/*": ["./tests/*"] }
   },
   "include": ["src", "tests"]
 }

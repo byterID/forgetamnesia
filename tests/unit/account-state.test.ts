@@ -54,7 +54,7 @@ function ratesOf(sheet: typeof fixture) {
 describe('account-state fixture (anonymised sheet of the user)', () => {
   const accounts = accountsOf(fixture);
   const state = positions(accounts, []);
-  const valuation = { base: RUB, rates: ratesOf(fixture), date: fixture.asOf };
+  const basis = { baseCurrency: RUB, rates: ratesOf(fixture), date: fixture.asOf };
 
   it('becomes one account per bank and currency', () => {
     expect(accounts.map((account) => `${account.name} ${account.kind}`)).toEqual([
@@ -71,10 +71,10 @@ describe('account-state fixture (anonymised sheet of the user)', () => {
   });
 
   it('net worth equals the total of the sheet formula, to the kopeck', () => {
-    expect(netWorth(state, valuation)).toEqual(parseMoney(fixture.expected.totalRub, RUB));
+    expect(netWorth(state, basis)).toEqual(parseMoney(fixture.expected.totalRub, RUB));
   });
 
   it('available now leaves out the locked IIS rubles and the crypto', () => {
-    expect(availableNow(state, valuation)).toEqual(parseMoney(fixture.expected.availableRub, RUB));
+    expect(availableNow(state, basis)).toEqual(parseMoney(fixture.expected.availableRub, RUB));
   });
 });

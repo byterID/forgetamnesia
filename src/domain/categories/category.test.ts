@@ -4,17 +4,7 @@ import {
   defaultCategories,
   type Category,
 } from '@/domain/categories';
-import { DomainError } from '@/domain/errors';
-
-function codeOf(run: () => unknown): string | undefined {
-  try {
-    run();
-  } catch (error) {
-    if (error instanceof DomainError) return error.code;
-    throw error;
-  }
-  return undefined;
-}
+import { codeOf } from '@tests/support/code-of';
 
 const housing: Category = { id: 'housing', name: 'Жильё', kind: 'expense', order: 0 };
 const rent: Category = {

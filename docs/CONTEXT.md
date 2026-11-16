@@ -12,6 +12,8 @@
 | Сумма | `Money` | `{ amount: integer minor units, asset }`. Никогда не float. |
 | Курс | `Rate` | Цена актива в USD на дату (`asOf`), источник `api`/`manual`. Кросс-курс считается через USD. |
 | Счёт | `Account` | Место хранения денег одного актива. Вид — `AccountKind`. |
+| Позиция | `Position` | Счёт вместе с его текущим балансом (начальный остаток + операции). |
+| База отчёта | `ReportingBasis` | В чём считаются итоги: основная валюта, набор курсов и дата. Не путать с `valuation`. |
 | Вид счёта | `AccountKind` | `cash`, `bank`, `card`, `credit`, `savings` (с процентом), `locked` (ИИС, депозит без снятия), `investment`, `crypto`. |
 | Ликвидность | `liquidity` | `available` / `locked` / `volatile`. Выводится из вида счёта, можно переопределить: `cash`, `bank`, `card`, `savings` → `available`; `locked` → `locked`; `investment`, `crypto` → `volatile`; `credit` — вне ликвидности (долг учитывается отдельно). |
 | Операция | `Transaction` | Фактическое движение денег. Тип — `TransactionType`. |

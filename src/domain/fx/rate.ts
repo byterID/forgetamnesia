@@ -15,12 +15,24 @@ export interface Rate {
 }
 
 /** A USD price as an exact positive decimal; throws `rate-invalid` otherwise. */
-export function usdPrice(value: DecimalInput): Dec {
+export function parseUsdPrice(value: DecimalInput): Dec {
   const price = decimal(value);
   if (!price.isPositive() || price.isZero()) {
     throw new DomainError('rate-invalid', `USD price must be positive, got "${String(value)}"`);
   }
   return price;
+}
+
+/**
+ * The USD price of an asset in its canonical stored form: a plain decimal string without an
+ * exponent. A dollar costs exactly one dollar, so any other price for USD is refused.
+ */
+export function usdPriceFor(assetCode: string, value: DecimalInput): string {
+  const price = parseUsdPrice(value);
+  if (assetCode === 'USD' && !price.equals(1)) {
+    throw new DomainError('rate-invalid', `USD costs exactly 1 USD, got "${String(value)}"`);
+  }
+  return price.toFixed();
 }
 
 export function rate(input: {
@@ -29,9 +41,10 @@ export function rate(input: {
   asOf: string;
   source: RateSource;
 }): Rate {
+  const asset = input.asset.toUpperCase();
   return {
-    asset: input.asset.toUpperCase(),
-    usdPrice: usdPrice(input.usdPrice).toFixed(),
+    asset,
+    usdPrice: usdPriceFor(asset, input.usdPrice),
     asOf: isoDate(input.asOf),
     source: input.source,
   };

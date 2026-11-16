@@ -1,25 +1,15 @@
 import fc from 'fast-check';
 import { createAccount, type Account } from '@/domain/accounts';
 import { accountBalance, availableNow, netWorth, positions } from '@/domain/balance';
-import { DomainError } from '@/domain/errors';
 import { rate } from '@/domain/fx';
 import { cryptoAsset, fiatAsset, money, zeroMoney, type Asset, type Money } from '@/domain/money';
 import type { Transaction } from '@/domain/transactions';
+import { codeOf } from '@tests/support/code-of';
 
 const RUB = fiatAsset('RUB');
 const USD = fiatAsset('USD');
 const AMD = fiatAsset('AMD');
 const BTC = cryptoAsset('BTC');
-
-function codeOf(run: () => unknown): string | undefined {
-  try {
-    run();
-  } catch (error) {
-    if (error instanceof DomainError) return error.code;
-    throw error;
-  }
-  return undefined;
-}
 
 function account(id: string, kind: Account['kind'], opening: Money, extra: Partial<Account> = {}) {
   return createAccount({
@@ -173,7 +163,7 @@ describe('netWorth and availableNow', () => {
     rate({ asset: 'AMD', usdPrice: '0.0025', asOf: '2026-11-01', source: 'api' }),
     rate({ asset: 'BTC', usdPrice: '65000', asOf: '2026-11-01', source: 'api' }),
   ];
-  const valuation = { base: RUB, rates, date: '2026-11-16' };
+  const basis = { baseCurrency: RUB, rates, date: '2026-11-16' };
 
   const accounts = [
     card, //                                                   10 000 RUB  available
@@ -190,17 +180,17 @@ describe('netWorth and availableNow', () => {
 
   it('net worth is every balance in the base currency, debts included, imported history excluded', () => {
     // 10 000 + 40 000 + 20 000 + 30 000 + 400 000 + 150 000 + 52 000 - 25 000 = 677 000 RUB
-    expect(netWorth(state, valuation)).toEqual(money(67700000, RUB));
+    expect(netWorth(state, basis)).toEqual(money(67700000, RUB));
   });
 
   it('available now is the available accounts minus credit-card debt', () => {
     // 10 000 + 40 000 + 20 000 + 30 000 - 25 000 = 75 000 RUB
-    expect(availableNow(state, valuation)).toEqual(money(7500000, RUB));
+    expect(availableNow(state, basis)).toEqual(money(7500000, RUB));
   });
 
   it('available now subtracts what is reserved for goals', () => {
-    expect(availableNow(state, valuation, money(2000000, RUB))).toEqual(money(5500000, RUB));
-    expect(codeOf(() => availableNow(state, valuation, money(1, USD)))).toBe('asset-mismatch');
+    expect(availableNow(state, basis, money(2000000, RUB))).toEqual(money(5500000, RUB));
+    expect(codeOf(() => availableNow(state, basis, money(1, USD)))).toBe('asset-mismatch');
   });
 
   it('an unused credit limit and an overpaid credit card are not available money', () => {
@@ -211,8 +201,8 @@ describe('netWorth and availableNow', () => {
       ],
       [],
     );
-    expect(availableNow(overpaid, valuation)).toEqual(money(1000000, RUB));
-    expect(netWorth(overpaid, valuation)).toEqual(money(1300000, RUB));
+    expect(availableNow(overpaid, basis)).toEqual(money(1000000, RUB));
+    expect(netWorth(overpaid, basis)).toEqual(money(1300000, RUB));
   });
 
   it('a liquidity override moves an account in or out of available', () => {
@@ -223,12 +213,23 @@ describe('netWorth and availableNow', () => {
       ],
       [],
     );
-    expect(availableNow(overridden, valuation)).toEqual(money(5200000, RUB));
+    expect(availableNow(overridden, basis)).toEqual(money(5200000, RUB));
+  });
+
+  it('a credit card overridden to available counts once, debt or not', () => {
+    const debt = account('credit', 'credit', money(-250000, RUB), {
+      liquidityOverride: 'available',
+    });
+    const surplus = account('credit', 'credit', money(300000, RUB), {
+      liquidityOverride: 'available',
+    });
+    expect(availableNow(positions([card, debt], []), basis)).toEqual(money(750000, RUB));
+    expect(availableNow(positions([card, surplus], []), basis)).toEqual(money(1300000, RUB));
   });
 
   it('reports in whatever base currency is asked', () => {
     // 677 000 RUB at 80 RUB per USD.
-    expect(netWorth(state, { ...valuation, base: USD })).toEqual(money(846250, USD));
+    expect(netWorth(state, { ...basis, baseCurrency: USD })).toEqual(money(846250, USD));
   });
 
   it('rounds the total once, not every account', () => {
@@ -242,17 +243,17 @@ describe('netWorth and availableNow', () => {
       ['a', 'b', 'c'].map((id) => account(id, 'cash', money(5, milli))),
       [],
     );
-    expect(netWorth(dust, { ...valuation, rates: flat })).toEqual(money(2, RUB));
+    expect(netWorth(dust, { ...basis, rates: flat })).toEqual(money(2, RUB));
   });
 
-  it('uses the rates of the valuation date', () => {
+  it('uses the rates of the basis date', () => {
     const later = [
       ...rates,
       rate({ asset: 'RUB', usdPrice: '0.01', asOf: '2026-11-10', source: 'manual' }),
     ];
     const usdOnly = positions([dollars], []);
-    expect(netWorth(usdOnly, { ...valuation, rates: later })).toEqual(money(5000000, RUB));
-    expect(netWorth(usdOnly, { ...valuation, rates: later, date: '2026-11-05' })).toEqual(
+    expect(netWorth(usdOnly, { ...basis, rates: later })).toEqual(money(5000000, RUB));
+    expect(netWorth(usdOnly, { ...basis, rates: later, date: '2026-11-05' })).toEqual(
       money(4000000, RUB),
     );
   });
@@ -260,13 +261,20 @@ describe('netWorth and availableNow', () => {
   it('needs a rate only for assets that actually hold something', () => {
     const jpy = fiatAsset('JPY');
     const empty = positions([card, account('yen', 'cash', zeroMoney(jpy))], []);
-    expect(netWorth(empty, valuation)).toEqual(money(1000000, RUB));
+    expect(netWorth(empty, basis)).toEqual(money(1000000, RUB));
     const held = positions([card, account('yen', 'cash', money(1000, jpy))], []);
-    expect(codeOf(() => netWorth(held, valuation))).toBe('rate-missing');
+    expect(codeOf(() => netWorth(held, basis))).toBe('rate-missing');
+  });
+
+  it('needs no rate at all while every account is in the base currency', () => {
+    const roubles = positions([card, account('credit', 'credit', money(-250000, RUB))], []);
+    const noRates = { baseCurrency: RUB, rates: [], date: '2026-11-16' };
+    expect(netWorth(roubles, noRates)).toEqual(money(750000, RUB));
+    expect(availableNow(roubles, noRates)).toEqual(money(750000, RUB));
   });
 
   it('is zero with no accounts', () => {
-    expect(netWorth([], valuation)).toEqual(zeroMoney(RUB));
-    expect(availableNow([], valuation)).toEqual(zeroMoney(RUB));
+    expect(netWorth([], basis)).toEqual(zeroMoney(RUB));
+    expect(availableNow([], basis)).toEqual(zeroMoney(RUB));
   });
 });

@@ -1,6 +1,5 @@
 import { createAccount } from '@/domain/accounts';
 import type { Category } from '@/domain/categories';
-import { DomainError } from '@/domain/errors';
 import { fiatAsset, money, zeroMoney } from '@/domain/money';
 import {
   balanceEffects,
@@ -12,6 +11,7 @@ import {
   type Transaction,
   type Transfer,
 } from '@/domain/transactions';
+import { codeOf } from '@tests/support/code-of';
 
 const RUB = fiatAsset('RUB');
 const USD = fiatAsset('USD');
@@ -43,16 +43,6 @@ const groceries: Category = { id: 'groceries', name: 'Продукты', kind: '
 const salary: Category = { id: 'salary', name: 'Зарплата', kind: 'income', order: 0 };
 
 const ctx = lookupContext([card, cash, dollars], [groceries, salary]);
-
-function codeOf(run: () => unknown): string | undefined {
-  try {
-    run();
-  } catch (error) {
-    if (error instanceof DomainError) return error.code;
-    throw error;
-  }
-  return undefined;
-}
 
 const expense: Transaction = {
   id: 't1',
@@ -150,6 +140,16 @@ describe('createTransaction', () => {
     );
   });
 
+  it('requires a whole number of minor units, however the amount was built', () => {
+    const float = { amount: 10.5, asset: RUB };
+    expect(codeOf(() => createTransaction({ ...expense, amount: float }, ctx))).toBe(
+      'amount-invalid',
+    );
+    expect(codeOf(() => createTransaction({ ...transfer, sent: float }, ctx))).toBe(
+      'amount-invalid',
+    );
+  });
+
   it('requires the amount to be in the asset of its account', () => {
     expect(codeOf(() => createTransaction({ ...expense, amount: money(100, USD) }, ctx))).toBe(
       'asset-mismatch',
@@ -199,6 +199,36 @@ describe('createTransaction', () => {
     expect(codeOf(() => createTransaction({ ...exchange, receivedUsdPrice: '-1' }, ctx))).toBe(
       'rate-invalid',
     );
+  });
+
+  it('a dollar always costs one dollar', () => {
+    const inDollars: Transaction = {
+      ...income,
+      accountId: 'usd',
+      amount: money(10000, USD),
+      usdPrice: '1',
+    };
+    expect(createTransaction(inDollars, ctx)).toEqual(inDollars);
+    expect(codeOf(() => createTransaction({ ...inDollars, usdPrice: '0.99' }, ctx))).toBe(
+      'rate-invalid',
+    );
+    expect(codeOf(() => createTransaction({ ...exchange, receivedUsdPrice: '1.01' }, ctx))).toBe(
+      'rate-invalid',
+    );
+  });
+
+  it('an expense may carry the amount in the currency of the purchase, for information', () => {
+    const abroad = { ...expense, purchaseAmount: money(5000000, AMD) };
+    expect(createTransaction(abroad, ctx)).toEqual(abroad);
+    expect(balanceEffects(abroad)).toEqual(balanceEffects(expense));
+    expect(
+      codeOf(() => createTransaction({ ...expense, purchaseAmount: money(-1, AMD) }, ctx)),
+    ).toBe('transaction-invalid');
+    expect(
+      codeOf(() =>
+        createTransaction({ ...expense, purchaseAmount: { amount: 0.5, asset: AMD } }, ctx),
+      ),
+    ).toBe('amount-invalid');
   });
 
   it('a same-asset transfer cannot deliver more than was sent', () => {

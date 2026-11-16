@@ -2,8 +2,10 @@ import type { Account } from '@/domain/accounts';
 import type { Category, CategoryKind } from '@/domain/categories';
 import { isoDate, type IsoDate } from '@/domain/date';
 import { DomainError } from '@/domain/errors';
-import { convertExact, usdPrice } from '@/domain/fx';
+import { convertExact, usdPriceFor } from '@/domain/fx';
 import {
+  assertMoney,
+  compareMoney,
   isPositive,
   negateMoney,
   roundToMoney,
@@ -37,6 +39,8 @@ export interface Expense extends SingleAccount {
   readonly categoryId: string;
   /** One-off big purchase: left out of `burnRate` only (ADR-022). */
   readonly isOneOff?: boolean;
+  /** What was paid in the currency of the shop (RUB card in an AMD shop). Information only. */
+  readonly purchaseAmount?: Money;
 }
 
 export interface Income extends SingleAccount {
@@ -89,8 +93,9 @@ function invalid(message: string): never {
   throw new DomainError('transaction-invalid', message);
 }
 
-/** The amount must be positive and in the asset of an existing account. */
+/** The amount must be a positive whole number of minor units in the asset of an existing account. */
 function assertFits(amount: Money, accountId: string, ctx: TransactionContext): void {
+  assertMoney(amount);
   const account = ctx.account(accountId);
   if (!account) invalid(`Account "${accountId}" does not exist`);
   if (!sameAsset(amount.asset, account.asset)) {
@@ -108,10 +113,8 @@ function assertCategory(categoryId: string, kind: CategoryKind, ctx: Transaction
   if (category.kind !== kind) invalid(`Category "${category.name}" is not an ${kind} category`);
 }
 
-const normalisedPrice = (value: DecimalInput) => usdPrice(value).toFixed();
-
 /** Checks every invariant of a transaction and returns it normalised; throws `DomainError`. */
-export function createTransaction(input: Transaction, ctx: TransactionContext): Transaction {
+export function createTransaction<T extends Transaction>(input: T, ctx: TransactionContext): T {
   if (input.id === '') invalid('Transaction needs an id');
   const note = input.note?.trim();
   const tags = [...new Set((input.tags ?? []).map((tag) => tag.trim()).filter(Boolean))];
@@ -125,20 +128,28 @@ export function createTransaction(input: Transaction, ctx: TransactionContext): 
     if (input.fromAccountId === input.toAccountId) invalid('Transfer needs two different accounts');
     assertFits(input.sent, input.fromAccountId, ctx);
     assertFits(input.received, input.toAccountId, ctx);
-    if (!isExchange(input) && input.received.amount > input.sent.amount) {
+    if (!isExchange(input) && compareMoney(input.received, input.sent) > 0) {
       invalid('A transfer cannot deliver more than was sent');
     }
     return omitUndefined({
       ...input,
       ...core,
-      sentUsdPrice: normalisedPrice(input.sentUsdPrice),
-      receivedUsdPrice: normalisedPrice(input.receivedUsdPrice),
+      sentUsdPrice: usdPriceFor(input.sent.asset.code, input.sentUsdPrice),
+      receivedUsdPrice: usdPriceFor(input.received.asset.code, input.receivedUsdPrice),
     });
   }
 
   assertFits(input.amount, input.accountId, ctx);
   if (input.type !== 'adjustment') assertCategory(input.categoryId, input.type, ctx);
-  return omitUndefined({ ...input, ...core, usdPrice: normalisedPrice(input.usdPrice) });
+  if (input.type === 'expense' && input.purchaseAmount) {
+    assertMoney(input.purchaseAmount);
+    if (!isPositive(input.purchaseAmount)) invalid('Purchase amount must be greater than zero');
+  }
+  return omitUndefined({
+    ...input,
+    ...core,
+    usdPrice: usdPriceFor(input.amount.asset.code, input.usdPrice),
+  });
 }
 
 export function isExchange(transfer: Transfer): boolean {
@@ -158,14 +169,21 @@ export function transferFee(transfer: Transfer): Money | undefined {
  * sent, at the USD prices stored on the transaction, in the base currency. Positive when the
  * exchange beat the market. Zero for a same-asset transfer.
  */
-export function fxResult(transfer: Transfer, base: Asset, baseUsdPrice: DecimalInput): Money {
-  if (!isExchange(transfer)) return zeroMoney(base);
-  const received = convertExact(transfer.received, base, {
+export function fxResult(
+  transfer: Transfer,
+  baseCurrency: Asset,
+  baseCurrencyUsdPrice: DecimalInput,
+): Money {
+  if (!isExchange(transfer)) return zeroMoney(baseCurrency);
+  const received = convertExact(transfer.received, baseCurrency, {
     from: transfer.receivedUsdPrice,
-    to: baseUsdPrice,
+    to: baseCurrencyUsdPrice,
   });
-  const sent = convertExact(transfer.sent, base, { from: transfer.sentUsdPrice, to: baseUsdPrice });
-  return roundToMoney(received.minus(sent), base);
+  const sent = convertExact(transfer.sent, baseCurrency, {
+    from: transfer.sentUsdPrice,
+    to: baseCurrencyUsdPrice,
+  });
+  return roundToMoney(received.minus(sent), baseCurrency);
 }
 
 export interface BalanceEffect {

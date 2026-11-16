@@ -4,7 +4,7 @@ import type { Asset } from './asset';
 import type { Money } from './money';
 
 /**
- * The project's decimal arithmetic (ADR-005): 40 significant digits, banker's rounding.
+ * The project's decimal arithmetic (ADR-005, ADR-031): 40 significant digits, banker's rounding.
  * A private clone, so nobody's global `Decimal.set` can change how money is rounded.
  */
 export const Dec = Decimal.clone({ precision: 40, rounding: Decimal.ROUND_HALF_EVEN });

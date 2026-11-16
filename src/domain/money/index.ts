@@ -2,6 +2,7 @@ export { cryptoAsset, fiatAsset, MAX_DECIMALS, sameAsset } from './asset';
 export type { Asset, AssetType } from './asset';
 export {
   addMoney,
+  assertMoney,
   compareMoney,
   isNegative,
   isPositive,

@@ -1,15 +1,5 @@
-import { DomainError } from '@/domain/errors';
 import { cryptoAsset, fiatAsset, sameAsset } from '@/domain/money';
-
-function codeOf(run: () => unknown): string | undefined {
-  try {
-    run();
-  } catch (error) {
-    if (error instanceof DomainError) return error.code;
-    throw error;
-  }
-  return undefined;
-}
+import { codeOf } from '@tests/support/code-of';
 
 describe('Asset', () => {
   it('fiat asset takes its minor-unit digits from ISO 4217', () => {

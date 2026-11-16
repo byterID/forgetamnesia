@@ -1,15 +1,5 @@
-import { DomainError } from '@/domain/errors';
 import { pickRate, rate, usdPriceOn, type Rate } from '@/domain/fx';
-
-function codeOf(run: () => unknown): string | undefined {
-  try {
-    run();
-  } catch (error) {
-    if (error instanceof DomainError) return error.code;
-    throw error;
-  }
-  return undefined;
-}
+import { codeOf } from '@tests/support/code-of';
 
 const rub = (asOf: string, usdPrice: string, source: Rate['source'] = 'api') =>
   rate({ asset: 'RUB', usdPrice, asOf, source });
@@ -33,6 +23,13 @@ describe('rate', () => {
     expect(codeOf(() => rub('2026-11-16', '-1'))).toBe('rate-invalid');
     expect(codeOf(() => rub('2026-11-16', 'abc'))).toBe('amount-invalid');
     expect(codeOf(() => rub('2026-02-30', '0.0125'))).toBe('date-invalid');
+  });
+
+  it('a rate for USD can only be one dollar', () => {
+    const usd = (usdPrice: string) =>
+      rate({ asset: 'USD', usdPrice, asOf: '2026-11-16', source: 'manual' });
+    expect(usd('1.00').usdPrice).toBe('1');
+    expect(codeOf(() => usd('0.99'))).toBe('rate-invalid');
   });
 });
 
@@ -85,7 +82,8 @@ describe('usdPriceOn', () => {
     expect(usdPriceOn([], 'USD', '2026-11-16')).toBe('1');
     expect(
       usdPriceOn(
-        [rate({ asset: 'USD', usdPrice: '2', asOf: '2026-11-01', source: 'manual' })],
+        // A record that should not exist; `rate()` itself refuses it.
+        [{ asset: 'USD', usdPrice: '2', asOf: '2026-11-01', source: 'manual' }],
         'USD',
         '2026-11-16',
       ),

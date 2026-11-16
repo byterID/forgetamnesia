@@ -1,4 +1,3 @@
-import { DomainError } from '@/domain/errors';
 import {
   addMoney,
   compareMoney,
@@ -13,19 +12,10 @@ import {
   sumMoney,
   zeroMoney,
 } from '@/domain/money';
+import { codeOf } from '@tests/support/code-of';
 
 const RUB = fiatAsset('RUB');
 const USD = fiatAsset('USD');
-
-function codeOf(run: () => unknown): string | undefined {
-  try {
-    run();
-  } catch (error) {
-    if (error instanceof DomainError) return error.code;
-    throw error;
-  }
-  return undefined;
-}
 
 describe('Money', () => {
   it('is an integer number of minor units of one asset', () => {

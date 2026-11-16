@@ -1,7 +1,8 @@
 import fc from 'fast-check';
 import { DomainError } from '@/domain/errors';
-import { convert, convertExact, convertOn, rate } from '@/domain/fx';
+import { convert, convertExact, convertExactOn, convertOn, rate } from '@/domain/fx';
 import { cryptoAsset, Dec, fiatAsset, money, type Asset } from '@/domain/money';
+import { codeOf } from '@tests/support/code-of';
 
 const RUB = fiatAsset('RUB');
 const USD = fiatAsset('USD');
@@ -11,16 +12,6 @@ const BTC = cryptoAsset('BTC');
 /** Two made-up assets with equal prices, to hit exact halves. */
 const MILLI = cryptoAsset('MILLI', 3);
 const CENTI = cryptoAsset('CENTI', 2);
-
-function codeOf(run: () => unknown): string | undefined {
-  try {
-    run();
-  } catch (error) {
-    if (error instanceof DomainError) return error.code;
-    throw error;
-  }
-  return undefined;
-}
 
 describe('convert', () => {
   it('goes through the USD pivot: amount x price(from) / price(to)', () => {
@@ -59,8 +50,8 @@ describe('convert', () => {
 
   it('is the identity for the same asset, whatever the prices', () => {
     const amount = money(123456, RUB);
-    expect(convert(amount, RUB, { from: '0.0125', to: '0.0125' })).toBe(amount);
-    expect(convert(amount, RUB, { from: '3', to: '7' })).toBe(amount);
+    expect(convert(amount, RUB, { from: '0.0125', to: '0.0125' })).toEqual(amount);
+    expect(convert(amount, RUB, { from: '3', to: '7' })).toEqual(amount);
   });
 
   it('rejects prices that are not positive and results that do not fit', () => {
@@ -94,6 +85,18 @@ describe('convertOn', () => {
 
   it('needs no rate at all for the same asset', () => {
     expect(convertOn(money(500, JPY), JPY, [], '2026-11-16')).toEqual(money(500, JPY));
+    expect(convertExactOn(money(500, JPY), JPY, [], '2026-11-16').toString()).toBe('500');
+  });
+
+  it('exposes the unrounded result as well', () => {
+    const withBtc = [
+      ...rates,
+      rate({ asset: 'BTC', usdPrice: '65000', asOf: '2026-11-01', source: 'api' }),
+    ];
+    // 1 RUB at 0.0125 USD = 19.23 satoshi, as in the direct conversion above.
+    expect(convertExactOn(money(100, RUB), BTC, withBtc, '2026-11-12').toFixed(6)).toBe(
+      '19.230769',
+    );
   });
 
   it('fails with the missing asset named', () => {
