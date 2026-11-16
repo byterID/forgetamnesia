@@ -1,4 +1,8 @@
-import Dexie from 'dexie';
+import Dexie, { type Table } from 'dexie';
+import type { Account } from '@/domain/accounts';
+import type { Category } from '@/domain/categories';
+import type { Rate } from '@/domain/fx';
+import type { Transaction } from '@/domain/transactions';
 
 export const DB_NAME = 'forgetamnesia';
 
@@ -11,11 +15,33 @@ export const DB_NAME = 'forgetamnesia';
 export const SCHEMA_VERSIONS: readonly {
   version: number;
   stores: Record<string, string | null>;
-}[] = [{ version: 1, stores: {} }];
+}[] = [
+  { version: 1, stores: {} },
+  {
+    version: 2,
+    stores: {
+      accounts: 'id, kind',
+      transactions: 'id, date, accountId, fromAccountId, toAccountId, categoryId',
+      categories: 'id, parentId, kind',
+      rates: 'id, asset',
+    },
+  },
+];
+
+/** A stored record: the domain entity, plus a tombstone once deleted (never erased, ADR-004). */
+export type Stored<T> = T & { readonly deletedAt?: number };
+
+/** A rate row; its id is `asset:asOf:source`, so the same rate from two devices is one record. */
+export type RateRow = Rate & { readonly id: string };
 
 export const CURRENT_VERSION = SCHEMA_VERSIONS.length;
 
 export class AppDb extends Dexie {
+  declare accounts: Table<Stored<Account>, string>;
+  declare transactions: Table<Stored<Transaction>, string>;
+  declare categories: Table<Stored<Category>, string>;
+  declare rates: Table<Stored<RateRow>, string>;
+
   constructor(name = DB_NAME) {
     super(name);
     for (const { version, stores } of SCHEMA_VERSIONS) this.version(version).stores(stores);
