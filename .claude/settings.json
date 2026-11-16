@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./node_modules/**)",
+      "Read(./dist/**)",
+      "Read(./dev-dist/**)",
+      "Read(./coverage/**)",
+      "Read(./playwright-report/**)",
+      "Read(./test-results/**)",
+      "Read(./android/app/build/**)",
+      "Read(./pnpm-lock.yaml)",
+      "Read(./package-lock.json)",
+      "Read(./private/**)",
+      "Read(./docs/progress/archive.md)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  }
+}
