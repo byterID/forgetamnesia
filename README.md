@@ -41,15 +41,19 @@ UI (React) ──► Domain (чистый TS) ──► Dexie (IndexedDB) ──
 React + TypeScript + Vite + vite-plugin-pwa · Dexie · Zustand · Tailwind + shadcn/ui · Recharts ·
 decimal.js · rrule · Vitest · Playwright · Capacitor (Android).
 
-## Быстрый старт (после M0)
+## Быстрый старт
 
 ```bash
 pnpm install
-cp .env.example .env        # VITE_GOOGLE_CLIENT_ID — см. docs/plan/spikes.md, шаг «Настройка Google Cloud»
+cp .env.example .env        # затем заполнить VITE_GOOGLE_CLIENT_ID
+bash scripts/setup-wizard.sh   # (один раз) мастер: проект Google Cloud, OAuth-клиенты, Cloudflare Pages
 pnpm dev                    # http://localhost:5173
 pnpm test                   # unit
-pnpm test:e2e               # Playwright
+pnpm lint && pnpm typecheck && pnpm build
 ```
+
+Переменные описаны в `.env.example`. Prod-клиент задаётся в настройках Cloudflare Pages,
+файл `.env` не коммитится.
 
 ## Документы
 
