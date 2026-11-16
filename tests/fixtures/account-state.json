@@ -1,0 +1,39 @@
+{
+  "description": "Anonymised copy of the user's account-state sheet (docs/spec/import.md I1, table 1): same structure, invented amounts. Rows are banks, columns are currencies; rates are the sheet's own (RUB per unit). The 'debt' column is carried but not part of the total (its meaning is open, ADR-025).",
+  "asOf": "2026-11-01",
+  "rates": { "usdRub": "81.37", "amdRub": "0.2113" },
+  "rows": [
+    {
+      "bank": "Ardshin",
+      "amd": "1250000",
+      "rub": "0",
+      "usd": "320.50",
+      "lockedRub": "0",
+      "debt": "0"
+    },
+    {
+      "bank": "Fast bank",
+      "amd": "84300.5",
+      "rub": "0",
+      "usd": "0",
+      "lockedRub": "0",
+      "debt": "0"
+    },
+    {
+      "bank": "Тбанк",
+      "amd": "0",
+      "rub": "154210.37",
+      "usd": "0",
+      "lockedRub": "400000",
+      "debt": "15000"
+    },
+    { "bank": "Озон банк", "amd": "0", "rub": "50000", "usd": "0", "lockedRub": "0", "debt": "0" },
+    { "bank": "ВТБ", "amd": "0", "rub": "12345.67", "usd": "100", "lockedRub": "0", "debt": "0" },
+    { "bank": "Крипта", "amd": "0", "rub": "0", "usd": "1830.12", "lockedRub": "0", "debt": "0" }
+  ],
+  "sheetFormula": "total = SUM(amd) * amdRub + SUM(rub) + SUM(usd) * usdRub + SUM(lockedRub)",
+  "expected": {
+    "totalRub": "1081626.69",
+    "availableRub": "532709.82"
+  }
+}
