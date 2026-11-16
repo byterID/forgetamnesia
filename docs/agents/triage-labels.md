@@ -12,4 +12,4 @@
 | `wontfix`                  | `wontfix`            | Делать не будем |
 
 Метки этапов и `spike` / `needs-permission` / `provisional` — отдельный словарь, см. `docs/agents/issue-tracker.md`.
-`needs-permission` всегда сочетается с `ready-for-human` до разрешения пользователя, не с `ready-for-agent`.
+Тикет с `needs-permission` не получает `ready-for-agent`, пока пользователь не разрешил старт в чате; после разрешения агент добавляет `ready-for-agent` и записывает разрешение комментарием.
