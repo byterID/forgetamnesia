@@ -39,6 +39,11 @@ export default defineConfig({
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.test.{ts,tsx}', 'src/main.tsx'],
       reporter: ['text-summary', 'lcov'],
+      // Money maths has no untested branch (docs/plan/M1.md, "Готово, когда").
+      thresholds: {
+        'src/domain/money/**': { branches: 100 },
+        'src/domain/fx/**': { branches: 100 },
+      },
     },
   },
 });
