@@ -18,7 +18,7 @@
 ## N3. Безопасность и приватность
 - Нет сервера с данными пользователя. Scope'ы: `drive.appdata`, `calendar.app.created`; read-only календари — только по запросу.
 - Токены — только в памяти (не в localStorage).
-- CSP: `default-src 'self'`; разрешённые connect-src: googleapis.com, accounts.google.com, API курсов.
+- CSP: см. ADR-029 (`public/_headers`): `default-src 'self'`, Google Identity (script-src, frame-src), connect-src — Google и API курсов (после S3).
 - Зависимости: `pnpm audit` в CI, Renovate/Dependabot.
 - Шифрование журналов паролем (AES-GCM, ключ из PBKDF2/Argon2) — опция M9; без пароля данные не восстановить — предупреждение явное.
 

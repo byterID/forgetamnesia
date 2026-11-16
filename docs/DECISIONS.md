@@ -99,3 +99,8 @@ Tauri — только если понадобится то, чего не ум�
 **ADR-028 — Lighthouse CI против локальной production-сборки** · provisional · 2026-11-16
 Контекст: замеры по URL Cloudflare Pages зависят от сети и CDN, результат недетерминирован.
 Решение: `lhci autorun` поднимает `pnpm preview` на собранном `dist/`, 3 прогона, пресет `perf` (в Lighthouse нет категории PWA; устанавливаемость проверяют тест манифеста и e2e). Утверждения: Performance ≥ 0.95, LCP < 2000 мс, TBT < 200 мс. Размер: `size-limit` ≤ 200 KB gzip для `dist/assets/index-*.js`. В `index.html` лежит статичная оболочка (только имя бренда), чтобы FCP не ждал JS; Toaster подгружается лениво.
+
+**ADR-029 — CSP и заголовки Cloudflare Pages (`public/_headers`)** · provisional · 2026-11-16
+Решение: `default-src 'self'`; `script-src 'self' https://accounts.google.com/gsi/client` (без inline-скриптов); `frame-src https://accounts.google.com`; `connect-src 'self'` + `accounts.google.com`, `www.googleapis.com`, `oauth2.googleapis.com`; `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'self'`. Дополнительно: `nosniff`, `Referrer-Policy`, `Permissions-Policy`, `COOP: same-origin-allow-popups` (нужен окну входа Google). `sw.js` и манифест — `no-cache`, `/assets/*` — `immutable`.
+Компромисс: `style-src` содержит `'unsafe-inline'` (sonner вставляет `<style>`, оболочка в `index.html` — style-атрибут); скрипты при этом остаются строгими. Пересмотреть, когда появится nonce-механизм.
+Открыто: хосты API курсов добавить в `connect-src` после спайка S3 (сейчас их нет, запросы к ним будут заблокированы). Расхождение в `nfr.md` N3 (только connect-src) этим решением закрыто.
