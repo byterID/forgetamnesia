@@ -1,5 +1,12 @@
 export type DomainErrorCode =
-  'asset-invalid' | 'asset-mismatch' | 'amount-invalid' | 'amount-overflow' | 'money-parse';
+  | 'asset-invalid'
+  | 'asset-mismatch'
+  | 'amount-invalid'
+  | 'amount-overflow'
+  | 'money-parse'
+  | 'date-invalid'
+  | 'rate-invalid'
+  | 'rate-missing';
 
 /** Every rule violation in `src/domain` throws this; callers branch on `code`, never on the message. */
 export class DomainError extends Error {
