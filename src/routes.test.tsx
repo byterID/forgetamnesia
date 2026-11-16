@@ -20,10 +20,10 @@ describe('routing', () => {
 
     const nav = screen.getByRole('navigation', { name: t('nav.label') });
     for (const [link, heading] of [
-      ['nav.operations', 'screen.operations'],
-      ['nav.calendar', 'screen.calendar'],
-      ['nav.goals', 'screen.goals'],
-      ['nav.home', 'screen.home'],
+      ['screen.operations', 'screen.operations'],
+      ['screen.calendar', 'screen.calendar'],
+      ['screen.goals', 'screen.goals'],
+      ['screen.home', 'screen.home'],
     ] as const) {
       await user.click(screen.getByRole('link', { name: t(link) }));
       expect(await screen.findByRole('heading', { name: t(heading) })).toBeInTheDocument();
@@ -34,7 +34,7 @@ describe('routing', () => {
   it('More menu reaches Plans, Analytics, Inbox, Settings (and Accounts)', async () => {
     const user = userEvent.setup();
     renderAt('/');
-    await user.click(screen.getByRole('link', { name: t('nav.more') }));
+    await user.click(screen.getByRole('link', { name: t('screen.more') }));
     for (const [link, heading] of [
       ['screen.accounts', 'screen.accounts'],
       ['screen.plans', 'screen.plans'],
@@ -44,7 +44,7 @@ describe('routing', () => {
     ] as const) {
       await user.click(await screen.findByRole('link', { name: t(link) }));
       expect(await screen.findByRole('heading', { name: t(heading) })).toBeInTheDocument();
-      await user.click(screen.getByRole('link', { name: t('nav.more') }));
+      await user.click(screen.getByRole('link', { name: t('screen.more') }));
     }
   });
 

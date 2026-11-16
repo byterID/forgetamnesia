@@ -1,15 +1,10 @@
 import { Suspense } from 'react';
 import { NavLink, Outlet } from 'react-router';
-import { t, type MessageKey } from '@/i18n';
+import { t } from '@/i18n';
+import { SCREENS } from '@/screens';
 import { cn } from '@/lib/utils';
 
-const TABS: readonly { to: string; key: MessageKey }[] = [
-  { to: '/', key: 'nav.home' },
-  { to: '/operations', key: 'nav.operations' },
-  { to: '/calendar', key: 'nav.calendar' },
-  { to: '/goals', key: 'nav.goals' },
-  { to: '/more', key: 'nav.more' },
-];
+const TABS = SCREENS.filter((screen) => screen.placement === 'tab');
 
 export function AppLayout() {
   return (
@@ -32,9 +27,9 @@ export function AppLayout() {
       >
         {TABS.map((tab) => (
           <NavLink
-            key={tab.to}
-            to={tab.to}
-            end={tab.to === '/'}
+            key={tab.path}
+            to={tab.path}
+            end={tab.path === '/'}
             className={({ isActive }) =>
               cn(
                 'flex min-h-14 min-w-11 flex-1 items-center justify-center px-1 text-xs',
@@ -42,7 +37,7 @@ export function AppLayout() {
               )
             }
           >
-            {t(tab.key)}
+            {t(tab.titleKey)}
           </NavLink>
         ))}
       </nav>

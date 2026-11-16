@@ -49,10 +49,11 @@ cp .env.example .env        # затем заполнить VITE_GOOGLE_CLIENT_I
 bash scripts/setup-wizard.sh   # (один раз) мастер: проект Google Cloud, OAuth-клиенты, Cloudflare Pages
 pnpm dev                    # http://localhost:5173
 pnpm test                   # unit
+pnpm test:e2e               # Playwright (собирает и поднимает production-сборку)
 pnpm lint && pnpm typecheck && pnpm build
 ```
 
-Переменные описаны в `.env.example`. Prod-клиент задаётся в настройках Cloudflare Pages,
+Заглушки иконок PWA генерирует `node scripts/gen-placeholder-icons.mjs`. Переменные описаны в `.env.example`. Prod-клиент задаётся в настройках Cloudflare Pages,
 файл `.env` не коммитится.
 
 ## Документы

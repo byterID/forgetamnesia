@@ -1,3 +1,4 @@
+// Build-time file: Russian strings live here (manifest cannot call t()); keep in sync with ru.json.
 export const manifest = {
   name: 'ForgetAmnesia',
   short_name: 'ForgetAmnesia',

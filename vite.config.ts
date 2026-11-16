@@ -10,8 +10,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      // Update flow: the new SW installs, skips waiting and claims clients at once; main.tsx
-      // reloads the page when the new SW takes control, so users are never stuck on a stale shell.
+      // Update flow (ADR-027): the new SW installs, skips waiting and claims clients at once, so the
+      // next load always gets the new shell. The open page is NOT force-reloaded; a lazy chunk of the
+      // old build requested before reload may 404 (old precache is cleaned up). Revisit if that bites.
       registerType: 'autoUpdate',
       manifest,
       includeAssets: ['icons/*.png'],
@@ -38,8 +39,6 @@ export default defineConfig({
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.test.{ts,tsx}', 'src/main.tsx'],
       reporter: ['text-summary', 'lcov'],
-      // domain/sync dirs may be empty early on
-      allowExternal: false,
     },
   },
 });

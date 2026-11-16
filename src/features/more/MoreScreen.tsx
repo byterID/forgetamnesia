@@ -1,13 +1,8 @@
 import { Link } from 'react-router';
-import { t, type MessageKey } from '@/i18n';
+import { t } from '@/i18n';
+import { SCREENS } from '@/screens';
 
-const ITEMS: readonly { to: string; key: MessageKey }[] = [
-  { to: '/accounts', key: 'screen.accounts' },
-  { to: '/plans', key: 'screen.plans' },
-  { to: '/analytics', key: 'screen.analytics' },
-  { to: '/inbox', key: 'screen.inbox' },
-  { to: '/settings', key: 'screen.settings' },
-];
+const ITEMS = SCREENS.filter((screen) => screen.placement === 'more');
 
 export default function MoreScreen() {
   return (
@@ -15,9 +10,9 @@ export default function MoreScreen() {
       <h1 className="text-xl font-semibold">{t('screen.more')}</h1>
       <ul className="mt-4 divide-y divide-border rounded-md border border-border">
         {ITEMS.map((item) => (
-          <li key={item.to}>
-            <Link to={item.to} className="flex min-h-11 items-center px-4">
-              {t(item.key)}
+          <li key={item.path}>
+            <Link to={item.path} className="flex min-h-11 items-center px-4">
+              {t(item.titleKey)}
             </Link>
           </li>
         ))}
