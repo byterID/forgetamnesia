@@ -1,5 +1,5 @@
 import Dexie from 'dexie';
-import { DB_NAME, openDb, runMigrationFrom } from '@/db/db';
+import { CURRENT_VERSION, DB_NAME, openDb, runMigrationFrom } from '@/db/db';
 import { requestPersistentStorage } from '@/db/persist';
 
 afterEach(async () => {
@@ -7,18 +7,18 @@ afterEach(async () => {
 });
 
 describe('db', () => {
-  it('creates schema v1 and a second open is idempotent', async () => {
+  it('creates the current schema and a second open is idempotent', async () => {
     const first = await openDb();
-    expect(first.verno).toBe(1);
+    expect(first.verno).toBe(CURRENT_VERSION);
     first.close();
     const second = await openDb();
-    expect(second.verno).toBe(1);
+    expect(second.verno).toBe(CURRENT_VERSION);
     second.close();
   });
 
   it('migration harness upgrades a v(N-1) fixture to vN', async () => {
     const final = await runMigrationFrom(0);
-    expect(final.verno).toBe(1);
+    expect(final.verno).toBe(CURRENT_VERSION);
     final.close();
   });
 });

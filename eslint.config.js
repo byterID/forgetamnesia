@@ -37,6 +37,32 @@ export default defineConfig(
       'react-refresh/only-export-components': ['error', { allowConstantExport: true }],
     },
   },
+  // src/domain is pure TypeScript: no React, no Dexie, no network, no other layer (CLAUDE.md).
+  {
+    files: ['src/domain/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: ['react', 'react-dom', 'react-router', 'dexie', 'dexie-react-hooks', 'zustand'],
+          patterns: [
+            {
+              group: ['@/db/*', '@/sync/*', '@/services/*', '@/features/*', '@/ui/*', '@/i18n/*'],
+              message: 'src/domain must not depend on other layers.',
+            },
+          ],
+        },
+      ],
+      'no-restricted-globals': [
+        'error',
+        'fetch',
+        'indexedDB',
+        'localStorage',
+        'window',
+        'document',
+      ],
+    },
+  },
   // shadcn convention: ui files co-export variants/helpers with components.
   { files: ['src/ui/**'], rules: { 'react-refresh/only-export-components': 'off' } },
   prettier,
