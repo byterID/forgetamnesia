@@ -6,7 +6,9 @@ export type DomainErrorCode =
   | 'money-parse'
   | 'date-invalid'
   | 'rate-invalid'
-  | 'rate-missing';
+  | 'rate-missing'
+  | 'account-invalid'
+  | 'category-invalid';
 
 /** Every rule violation in `src/domain` throws this; callers branch on `code`, never on the message. */
 export class DomainError extends Error {
